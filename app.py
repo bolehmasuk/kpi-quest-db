@@ -1,35 +1,54 @@
 import streamlit as st
 from backend.database import fetch_all_data, add_new_task, update_task_status
-from backend.kpi_logic import calculate_user_kpi, prepare_leaderboard_df
+from backend.kpi_logic import (
+    calculate_daily_kpi,
+    get_period_analytics,
+    generate_sharp_jpg_report,
+    compare_employees_data
+)
 from frontend.ui_components import (
     render_sidebar,
-    render_kpi_header,
-    render_todo_list,
-    render_leaderboard
+    render_daily_tab,
+    render_analytics_tab,
+    render_comparison_tab
 )
 
-# 1. Konfigurasi Halaman
 st.set_page_config(page_title="KPI Quest - Dashboard Karyawan", page_icon="🎯", layout="wide")
 
-# 2. Ambil Data dari Backend
 karyawan_list, tugas_list = fetch_all_data()
 
 if not karyawan_list:
     st.warning("Belum ada data karyawan di database.")
     st.stop()
 
-# 3. Render Sidebar & Dapatkan Karyawan Terpilih
-karyawan_aktif = render_sidebar(karyawan_list, on_add_task=add_new_task)
+karyawan_aktif, tanggal_str = render_sidebar(karyawan_list, on_add_task=add_new_task)
 
-# 4. Proses Logika KPI di Backend
-kpi_metrics = calculate_user_kpi(tugas_list, karyawan_aktif["id"])
-df_leaderboard = prepare_leaderboard_df(karyawan_list, tugas_list)
+st.header(f"Halo, {karyawan_aktif['nama']}! 👋", anchor=False)
+st.caption(f"Divisi: **{karyawan_aktif['divisi']}** | Peran: **{karyawan_aktif['role'].capitalize()}**")
 
-# 5. Render Tampilan Utama Frontend
-render_kpi_header(karyawan_aktif, kpi_metrics)
+tab1, tab2, tab3 = st.tabs([
+    "🎯 Misi Harian (To-Do)",
+    "📊 Statistik & Download JPG",
+    "🏆 Perbandingan Kontribusi Tim"
+])
 
-col_kiri, col_kanan = st.columns([1.4, 1])
-with col_kiri:
-    render_todo_list(kpi_metrics, on_toggle_task=update_task_status)
-with col_kanan:
-    render_leaderboard(df_leaderboard)
+with tab1:
+    kpi_harian = calculate_daily_kpi(tugas_list, karyawan_aktif["id"], tanggal_str)
+    render_daily_tab(
+        karyawan_aktif, tanggal_str, kpi_harian,
+        on_toggle_task=update_task_status,
+        tugas_list=tugas_list,
+        get_analytics_fn=get_period_analytics,
+        generate_jpg_fn=generate_sharp_jpg_report
+    )
+
+
+with tab2:
+    render_analytics_tab(
+        karyawan_aktif, tugas_list,
+        get_analytics_fn=get_period_analytics,
+        generate_jpg_fn=generate_sharp_jpg_report
+    )
+
+with tab3:
+    render_comparison_tab(karyawan_list, tugas_list, compare_fn=compare_employees_data)

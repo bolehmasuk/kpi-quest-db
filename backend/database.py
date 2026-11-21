@@ -13,12 +13,13 @@ def fetch_all_data():
     res_tugas = supabase.table("tugas").select("*").order("id").execute()
     return res_karyawan.data, res_tugas.data
 
-def add_new_task(karyawan_id: int, deskripsi: str, bobot_xp: int):
+def add_new_task(karyawan_id: int, deskripsi: str, bobot_xp: int, tanggal_str: str):
     supabase = init_connection()
     supabase.table("tugas").insert({
         "karyawan_id": karyawan_id,
         "deskripsi": deskripsi,
         "bobot_xp": bobot_xp,
+        "tanggal": tanggal_str,
         "selesai": False
     }).execute()
 
